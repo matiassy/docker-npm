@@ -1,0 +1,50 @@
+services:
+  npm-app:
+    hostname: npm-app
+    container_name: npm-app
+    image: jc21/nginx-proxy-manager:2.12.1
+    restart: unless-stopped
+    ports:
+      - "${EXPOSED_PORT}:80"
+      - "${EXPOSED_PORTSSL}:443"
+      - "81:81"
+    volumes:
+      - ./config.json:/app/config/production.json
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+      - ./logs:/var/log/letsencrypt
+    environment:
+      DISABLE_IPV6: "true"
+      AUTH_MAX_RETRY: "${AUTH_MAX_RETRY}"
+      CLIENT_MAX_BODY_SIZE: "${CLIENT_MAX_BODY_SIZE}"
+    env_file:
+      - .env
+    depends_on:
+      - npm-db
+    networks:
+      - nginx-proxy-manager
+      - default
+
+  npm-db:
+    hostname: npm-db
+    container_name: npm-db
+    restart: unless-stopped
+    image: jc21/mariadb-aria:10.11.5
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+      MYSQL_DATABASE: "${MYSQL_DATABASE}"
+      MYSQL_USER: "${MYSQL_USER}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+      - ./db-data/initdb.d:/docker-entrypoint-initdb.d
+    networks:
+      - nginx-proxy-manager
+
+volumes:
+  data:
+  letsencrypt:
+
+networks:
+  nginx-proxy-manager:
+    name: nginx-proxy-manager
